@@ -1,4 +1,4 @@
-# Parking-Lot-Monitoring-System
+ParkVision - AI-Powered Parking Management System
 
 A real-time parking lot monitoring system that uses computer vision to detect and track available parking spaces across multiple parking lots.
 
