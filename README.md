@@ -1,17 +1,18 @@
-ParkVision - AI-Powered Parking Management System
+# ParkVision - AI-Powered Parking Management System
 
-A real-time parking lot monitoring system that uses computer vision to detect and track available parking spaces across multiple parking lots.
+## 🚗 Overview
+ParkVision is an intelligent parking management system that leverages computer vision and AI to monitor parking spaces in real-time. The system automatically detects occupied and available parking spots, provides live video feeds, and offers a comprehensive web-based dashboard for monitoring multiple parking lots simultaneously.
 
-## 📋 Features
+## ✨ Features
 
-- **Real-time monitoring** of parking spaces across multiple parking lots
-- **Automated detection** of occupied and available parking spaces
-- **Web-based interface** with responsive design
-- **Streaming video** of parking lots with space status overlay
-- **Dashboard** showing statistics for each parking lot
-- **Configurable parking spots** with interactive setup
+- **🎯 Real-time Parking Detection:** Advanced computer vision algorithms for accurate spot occupancy detection
+- **📹 Live Video Streaming:** Real-time MJPEG video feeds from multiple parking lots
+- **🌐 Web Dashboard:** Intuitive, responsive web interface for monitoring and management
+- **🏢 Multi-lot Support:** Simultaneous monitoring of multiple parking areas
+- **📊 Historical Analytics:** Track parking patterns and occupancy trends over time
+- **📱 Mobile Responsive:** Works seamlessly on desktop, tablet, and mobile devices
 
-## 🔧 Technologies Used
+## 🔧 Technical Features
 
 - **Backend**: Python, Flask, OpenCV, NumPy
 - **Frontend**: HTML, CSS, JavaScript
