@@ -1,137 +1,228 @@
 # ParkVision - AI-Powered Parking Management System
 
 ## 🚗 Overview
+
 ParkVision is an intelligent parking management system that leverages computer vision and AI to monitor parking spaces in real-time. The system automatically detects occupied and available parking spots, provides live video feeds, and offers a comprehensive web-based dashboard for monitoring multiple parking lots simultaneously.
 
 ## ✨ Features
 
-- **🎯 Real-time Parking Detection:** Advanced computer vision algorithms for accurate spot occupancy detection
-- **📹 Live Video Streaming:** Real-time MJPEG video feeds from multiple parking lots
-- **🌐 Web Dashboard:** Intuitive, responsive web interface for monitoring and management
-- **🏢 Multi-lot Support:** Simultaneous monitoring of multiple parking areas
-- **📊 Historical Analytics:** Track parking patterns and occupancy trends over time
-- **📱 Mobile Responsive:** Works seamlessly on desktop, tablet, and mobile devices
+### Core Functionality
+- **🎯 Real-time Parking Detection**: Advanced computer vision algorithms for accurate spot occupancy detection
+- **📹 Live Video Streaming**: Real-time MJPEG video feeds from multiple parking lots
+- **🌐 Web Dashboard**: Intuitive, responsive web interface for monitoring and management
+- **🏢 Multi-lot Support**: Simultaneous monitoring of multiple parking areas
+- **📊 Historical Analytics**: Track parking patterns and occupancy trends over time
+- **📱 Mobile Responsive**: Works seamlessly on desktop, tablet, and mobile devices
 
-## 🔧 Technical Features
+### Technical Features
+- **⚡ High Performance**: Optimized frame processing with threading and queue management
+- **🔄 Auto-recovery**: Automatic video stream retry mechanisms and error handling
+- **⚙️ Configurable**: Interactive parking spot configuration system
+- **🔧 RESTful API**: Clean API endpoints for data integration
+- **🎨 Modern UI**: Contemporary design with smooth animations and transitions
 
-- **Backend**: Python, Flask, OpenCV, NumPy
-- **Frontend**: HTML, CSS, JavaScript
-- **Video Processing**: OpenCV with adaptive thresholding
-- **Real-time Updates**: Asynchronous JavaScript with Fetch API
+## 🛠️ Technologies Used
 
-## 📦 Project Structure
+### Backend
+- **Python 3.7+**: Core programming language
+- **Flask 2.3.3**: Web framework for API and routing
+- **OpenCV 4.8.1**: Computer vision and image processing
+- **NumPy 1.24.3**: Numerical computing for image analysis
+- **Threading**: Concurrent processing for real-time performance
 
-```
-Parking_lot_detection/
-│
-├── app.py              # Main Flask application
-├── test3.py            # Parking spot detection class
-│
-├── assets/             # Video files and parking spot configurations
-│   ├── p1              # Parking lot 1 spot configuration
-│   ├── p1.mp4          # Parking lot 1 video feed
-│   ├── p2              # Parking lot 2 spot configuration
-│   ├── p2.mp4          # Parking lot 2 video feed
-│   ├── p3              # Parking lot 3 spot configuration
-│   ├── p3.mp4          # Parking lot 3 video feed
-│   └── CarParkPos4     # Additional parking configuration
-│
-├── static/             # Static web assets
-│   ├── details.js      # JavaScript for details page
-│   ├── script.js       # JavaScript for main page
-│   └── styles.css      # CSS styles
-│
-└── templates/          # HTML templates
-    ├── details.html    # Parking lot details page
-    └── index.html      # Main dashboard page
-```
+### Frontend
+- **HTML5 & CSS3**: Modern web standards
+- **JavaScript (ES6+)**: Dynamic user interactions
+- **Font Awesome**: Professional iconography
+- **Responsive Design**: Mobile-first approach
+
+### Computer Vision Pipeline
+- **Adaptive Thresholding**: Dynamic lighting condition handling
+- **Gaussian Blur**: Noise reduction
+- **Morphological Operations**: Image enhancement
+- **Occupancy Detection**: Pixel-based vacancy analysis
+
+## 📋 Prerequisites
+
+- **Python 3.7 or higher**
+- **Webcam or IP camera access**
+- **Modern web browser** (Chrome, Firefox, Safari, Edge)
+- **Video files** for parking lot monitoring (MP4 format recommended)
 
 ## 🚀 Installation & Setup
 
-### Prerequisites
+### 1. Clone the Repository
+```bash
+git clone https://github.com/yourusername/parkvision-ai-powered-parking-management.git
+cd parkvision-ai-powered-parking-management
+```
 
-- Python 3.11 or higher
-- OpenCV (cv2)
-- Flask
+### 2. Create Virtual Environment (Recommended)
+```bash
+python -m venv venv
 
-### Installation Steps
+# Windows
+venv\Scripts\activate
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/Parking_lot_detection.git
-   cd Parking_lot_detection
-   ```
+# macOS/Linux
+source venv/bin/activate
+```
 
-2. Install the required packages:
-   ```bash
-   pip install flask opencv-python numpy
-   ```
+### 3. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
 
-3. Prepare your parking lot videos:
-   - Place your video feeds in the `assets/` directory
-   - Videos should be named `p1.mp4`, `p2.mp4`, etc.
+### 4. Project Structure Setup
+Ensure your project structure matches:
+```
+parkvision/
+├── app.py                 # Main Flask application
+├── requirements.txt       # Python dependencies
+├── README.md             # This file
+├── assets/               # Video files and coordinates
+│   ├── video-1.mp4
+│   ├── video-3.mp4
+│   ├── coordinate-video-1
+│   └── coordinate-video-3
+├── core/
+│   └── parking_monitor.py # Core computer vision logic
+├── static/
+│   ├── css/
+│   │   └── styles.css
+│   └── js/
+│       ├── script.js
+│       └── details.js
+└── templates/
+    ├── index.html
+    └── details.html
+```
 
-4. Run the application:
-   ```bash
-   python app.py
-   ```
+### 5. Configure Parking Spots
+```bash
+# Run the parking monitor to configure spots
+python core/parking_monitor.py
+```
 
-5. Access the web interface:
-   - Open your browser and go to `http://localhost:5000`
+**Configuration Controls:**
+- **Left Click**: Add new parking spot
+- **Left Drag**: Resize existing spot
+- **Right Click**: Delete spot
+- **'R' Key**: Reset all spots
+- **ESC**: Save and exit
 
-## 🎮 Usage
+### 6. Launch the Application
+```bash
+python app.py
+```
 
-### Configure Parking Spaces
+Visit `http://localhost:5000` in your web browser.
 
-1. Run the application in configuration mode:
-   ```bash
-   python test3.py
-   ```
+## 📖 Usage Guide
 
-2. For each parking lot video:
-   - Use left-click to add parking spaces
-   - Drag to resize spaces
-   - Right-click to delete spaces
-   - Press 'r' to reset all spaces
-   - Press ESC to save and exit
+### Initial Setup
+1. **Video Configuration**: Place your parking lot video files in the `assets/` directory
+2. **Spot Configuration**: Run the configuration tool to mark parking spaces
+3. **Launch Dashboard**: Start the Flask application and access the web interface
 
-### View Parking Status
+### Web Interface
+- **Main Dashboard**: Overview of all parking lots with real-time statistics
+- **Details View**: Individual lot monitoring with live video feed
+- **Real-time Updates**: Automatic data refresh every 3-5 seconds
 
-1. Open the web application in your browser
-2. The main dashboard shows an overview of all parking lots
-3. Click "More Info" to see details for a specific lot
-4. The details page includes:
-   - Live video feed with space status overlay
-   - Real-time statistics (total, available, occupied)
-   - Automatic updates every 5 seconds
+### API Endpoints
+- `GET /api/parking-data`: Retrieve current parking statistics
+- `GET /api/parking-details?lot=1`: Get detailed information for specific lot
+- `GET /api/video-stream?lot=1`: Access live video stream
 
-## 🛠️ How It Works
+## 🏗️ System Architecture
 
-1. **Parking Space Detection**:
-   - The system uses computer vision techniques to detect available parking spaces
-   - Each space is processed using adaptive thresholding to determine occupancy
-   - A space is considered occupied when the pixel count exceeds a configurable threshold
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Video Input   │───▶│  Computer Vision │───▶│   Web Dashboard │
+│   (Cameras/     │    │   Processing     │    │   (Flask App)   │
+│    Files)       │    │   (OpenCV)       │    │                 │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+                                │
+                                ▼
+                       ┌──────────────────┐
+                       │  Real-time Data  │
+                       │   Processing     │
+                       │  (Threading)     │
+                       └──────────────────┘
+```
 
-2. **Web Interface**:
-   - Flask serves a responsive web interface
-   - JavaScript handles real-time updates via API calls
-   - Video feed is streamed using multipart/x-mixed-replace format
+## ⚙️ Configuration Options
 
-3. **Background Processing**:
-   - A background thread continuously processes video frames
-   - Parking statistics are updated in real-time
-   - The system handles multiple parking lots simultaneously
+### Video Settings
+```python
+# Frame processing optimization
+FRAME_SKIP = 1              # Process every nth frame
+OCCUPANCY_THRESHOLD = 0.2   # Sensitivity for spot detection
+```
+
+### Parking Spot Dimensions
+```python
+SPOT_WIDTH = 90   # Default spot width in pixels
+SPOT_HEIGHT = 30  # Default spot height in pixels
+```
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+**Static Files Not Loading**
+- Ensure you're accessing via `http://localhost:5000`, not opening HTML files directly
+- Check browser developer tools (F12) for 404 errors
+- Verify `static/` folder structure
+
+**Video Stream Issues**
+- Check video file paths in `parking_monitor.py`
+- Ensure video files are in correct format (MP4 recommended)
+- Verify camera permissions if using live cameras
+
+**Performance Issues**
+- Adjust `FRAME_SKIP` value to process fewer frames
+- Reduce video resolution if needed
+- Check system resources (CPU/Memory usage)
+
+**Configuration Problems**
+- Delete coordinate files to reconfigure spots
+- Ensure video files are accessible
+- Check file permissions
+
+## 🤝 Contributing
+
+We welcome contributions! Please follow these steps:
+
+1. **Fork the repository**
+2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
+3. **Commit changes** (`git commit -m 'Add amazing feature'`)
+4. **Push to branch** (`git push origin feature/amazing-feature`)
+5. **Open a Pull Request**
+
+### Development Guidelines
+- Follow PEP 8 style guidelines
+- Add comments for complex logic
+- Test thoroughly before submitting
+- Update documentation as needed
+
+## 🎯 Future Enhancements
+
+- [ ] **Database Integration**: Persistent data storage with SQLite/PostgreSQL
+- [ ] **Machine Learning**: Advanced occupancy prediction algorithms
+- [ ] **Mobile App**: Native iOS/Android applications
+- [ ] **Cloud Integration**: AWS/Azure deployment capabilities
+- [ ] **Analytics Dashboard**: Advanced reporting and insights
+- [ ] **Alert System**: Email/SMS notifications for parking events
+- [ ] **Payment Integration**: Parking fee management system
+- [ ] **Multi-camera Support**: Enhanced camera management
+- [ ] **Night Vision**: Low-light condition optimization
+- [ ] **Weather Adaptation**: Environmental condition handling
 
 ## 🙏 Acknowledgments
 
-- OpenCV team for the computer vision library
-- Flask team for the web framework
-- Font Awesome for icons
-
-## 🔄 Future Improvements
-
-- [ ] Add user authentication
-- [ ] Implement time-based analytics
-- [ ] Add email/SMS notifications when lots are full
-- [ ] Improve detection accuracy with machine learning
-- [ ] Add mobile app interface
+- **OpenCV Community**: For excellent computer vision libraries
+- **Flask Team**: For the lightweight web framework
+- **Contributors**: Thanks to all contributors and testers
+</div>
