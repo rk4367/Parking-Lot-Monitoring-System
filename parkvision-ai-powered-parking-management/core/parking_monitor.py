@@ -21,8 +21,8 @@ class ParkingMonitor:
             Path(r"assets\video-3.mp4")
         ]
         self.pos_files = [
-            Path(r"assets\coordinate-video-1"),
-            Path(r"assets\coordinate-video-3")
+            Path(r"assets\coordinate-video-1.pkl"),
+            Path(r"assets\coordinate-video-3.pkl")
         ]
         self.original_frame_sizes = [None, None]  # To store original video dimensions
 
