@@ -1,196 +1,175 @@
-# app.py
-
-from flask import Flask, jsonify, render_template, Response, request
 import cv2
-import numpy as np
 import pickle
-import threading
-import time
-import os
+import numpy as np
 from pathlib import Path
-from core.parking_monitor import ParkingMonitor
-from queue import Queue, Empty
 
-app = Flask(__name__, static_folder="static", template_folder="templates")
+class ParkingMonitor:
+    def __init__(self):
+        self.positions = []
+        self.drawing = False
+        self.current_idx = -1
+        self.start_pos = None
 
-# === Global variables ===
-parking_data = {
-    'lot1': {'total': 0, 'available': 0, 'occupied': 0, 'history': []},
-    'lot2': {'total': 0, 'available': 0, 'occupied': 0, 'history': []}
-}
+        # Configuration
+        self.SPOT_WIDTH, self.SPOT_HEIGHT = 90, 30
+        self.OCCUPANCY_THRESHOLD = 0.2
+        self.FRAME_SKIP = 1
 
-frame_queues = {
-    '1': Queue(maxsize=5),
-    '2': Queue(maxsize=5)
-}
+        # Use OS-independent paths
+        ASSET_DIR = Path("assets")
+        self.video_paths = [
+            ASSET_DIR / "video-1.mp4",
+            ASSET_DIR / "video-3.mp4"
+        ]
+        self.pos_files = [
+            ASSET_DIR / "coordinate-video-1.pkl",
+            ASSET_DIR / "coordinate-video-3.pkl"
+        ]
+        self.original_frame_sizes = [None, None]  # To store original video dimensions
 
-# === Background worker to update parking data ===
-def update_parking_data():
-    monitor = ParkingMonitor()
-    
-    # Load positions
-    for i in range(2):
-        pos_file = monitor.pos_files[i]
-        lot_key = f'lot{i+1}'
-        if pos_file.exists():
-            try:
+    def load_positions(self, pos_file):
+        try:
+            if pos_file.exists():
                 with open(pos_file, 'rb') as f:
-                    positions = pickle.load(f)
-                    parking_data[lot_key]['total'] = len(positions)
-            except Exception as e:
-                print(f"[ERROR] Couldn't load positions for {lot_key}: {e}")
-        else:
-            print(f"[WARN] Positions file not found: {pos_file}")
-
-    caps, positions_list = [], []
-
-    for i in range(2):
-        video_path = monitor.video_paths[i]
-        pos_file = monitor.pos_files[i]
-        lot_key = f'lot{i+1}'
-
-        if not pos_file.exists():
-            caps.append(None)
-            positions_list.append([])
-            continue
-
-        try:
-            with open(pos_file, 'rb') as f:
-                positions = pickle.load(f)
-                positions_list.append(positions)
-
-            cap = cv2.VideoCapture(str(video_path))
-            if cap.isOpened():
-                cap.set(cv2.CAP_PROP_BUFFERSIZE, 2)
-                caps.append(cap)
-            else:
-                print(f"[ERROR] Cannot open video source: {video_path}")
-                caps.append(None)
+                    data = pickle.load(f)
+                    if isinstance(data, list) and all(isinstance(p, (list, tuple)) and len(p) == 4 for p in data):
+                        return data
+                    else:
+                        print(f"[ERROR] Invalid data format in {pos_file.name}: {data}")
         except Exception as e:
-            print(f"[ERROR] Setup failed for {lot_key}: {e}")
-            caps.append(None)
-            positions_list.append([])
+            print(f"Error loading positions: {e}")
+        return []
 
-    video_fps = [cap.get(cv2.CAP_PROP_FPS) if cap else 30 for cap in caps]
-
-    frame_counters = [0, 0]
-    last_update_time = [time.time(), time.time()]
-
-    while True:
-        for i, (cap, positions) in enumerate(zip(caps, positions_list)):
-            lot_key = f'lot{i+1}'
-            lot_idx = str(i+1)
-
-            if cap is None or not positions:
-                continue
-
-            now = time.time()
-            elapsed = now - last_update_time[i]
-            frames_to_process = int(elapsed * video_fps[i])
-
-            if frames_to_process > 0:
-                for _ in range(frames_to_process - 1):
-                    cap.grab()
-
-                ret, frame = cap.read()
-                if not ret:
-                    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                    continue
-
-                processed_frame = monitor.process_frame(frame.copy(), positions, i)
-
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                blur = cv2.GaussianBlur(gray, (3, 3), 1)
-                thresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                               cv2.THRESH_BINARY_INV, 25, 16)
-                processed = cv2.medianBlur(thresh, 5)
-                processed = cv2.dilate(processed, np.ones((3, 3), np.uint8), iterations=1)
-
-                free_count = sum(
-                    cv2.countNonZero(processed[y:y+h, x:x+w]) <= (w * h * monitor.OCCUPANCY_THRESHOLD)
-                    for x, y, w, h in positions
-                )
-
-                occupied_count = len(positions) - free_count
-
-                parking_data[lot_key].update({
-                    'available': free_count,
-                    'occupied': occupied_count
-                })
-
-                frame_counters[i] += 1
-                if frame_counters[i] % 10 == 0:
-                    timestamp = time.strftime("%H:%M:%S")
-                    parking_data[lot_key]['history'].append({
-                        'time': timestamp,
-                        'available': free_count,
-                        'occupied': occupied_count
-                    })
-                    parking_data[lot_key]['history'] = parking_data[lot_key]['history'][-50:]
-
-                ret, buffer = cv2.imencode('.jpg', processed_frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
-                if ret:
-                    if frame_queues[lot_idx].full():
-                        try:
-                            frame_queues[lot_idx].get_nowait()
-                        except Empty:
-                            pass
-                    frame_queues[lot_idx].put(buffer.tobytes())
-
-                last_update_time[i] = now
-
-# === MJPEG stream ===
-def generate_frames(lot_id):
-    blank_frame = np.zeros((480, 640, 3), np.uint8)
-    blank_frame = cv2.putText(blank_frame, "No video feed available", (150, 240),
-                              cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-    _, blank_buffer = cv2.imencode('.jpg', blank_frame)
-    blank_data = blank_buffer.tobytes()
-
-    yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n')
-
-    while True:
+    def save_positions(self, positions, pos_file):
         try:
-            frame_data = frame_queues[lot_id].get(timeout=0.5)
-            yield (frame_data + b'\r\n--frame\r\nContent-Type: image/jpeg\r\n\r\n')
-        except Empty:
-            yield (blank_data + b'\r\n--frame\r\nContent-Type: image/jpeg\r\n\r\n')
+            with open(pos_file, 'wb') as f:
+                pickle.dump(positions, f)
+        except Exception as e:
+            print(f"Error saving positions: {e}")
 
-# === Flask Routes ===
-@app.route('/')
-def index():
-    return render_template('index.html')
+    def get_config_frame(self, video_path, video_idx):
+        cap = cv2.VideoCapture(str(video_path))
+        if not cap.isOpened():
+            print(f"Error opening video: {video_path}")
+            return None
 
-@app.route('/details.html')
-def details():
-    return render_template('details.html')
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        self.original_frame_sizes[video_idx] = (width, height)
 
-@app.route('/api/parking-data')
-def get_parking_data():
-    return jsonify({
-        'lot1': parking_data['lot1'],
-        'lot2': parking_data['lot2']
-    })
+        ret, frame = cap.read()
+        cap.release()
 
-@app.route('/api/parking-details')
-def get_parking_details():
-    lot = request.args.get('lot', '1')
-    lot_key = f'lot{lot}'
-    if lot_key in parking_data:
-        return jsonify(parking_data[lot_key])
-    return jsonify({'error': 'Invalid lot number'}), 400
+        if not ret:
+            return None
 
-@app.route('/api/video-stream')
-def video_stream():
-    lot = request.args.get('lot', '1')
-    if lot not in ['1', '2']:
-        return "Invalid lot number", 400
-    return Response(generate_frames(lot),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
+        frame = cv2.resize(frame, (width, height))
+        return frame
 
-# === Entry Point ===
-if __name__ == '__main__':
-    thread = threading.Thread(target=update_parking_data, daemon=True)
-    thread.start()
+    def _mouse_handler(self, event, x, y, flags, param):
+        pos_file, video_idx = param
 
-    app.run(debug=False, host='0.0.0.0', port=5000, use_reloader=False)
+        if event == cv2.EVENT_LBUTTONDOWN:
+            for i, (px, py, w, h) in enumerate(self.positions):
+                if px <= x <= px + w and py <= y <= py + h:
+                    self.current_idx = i
+                    self.drawing = True
+                    self.start_pos = (x, y)
+                    return
+            self.positions.append((x, y, self.SPOT_WIDTH, self.SPOT_HEIGHT))
+            self.save_positions(self.positions, pos_file)
+
+        elif event == cv2.EVENT_MOUSEMOVE and self.drawing:
+            if self.current_idx >= 0 and self.start_pos:
+                dx, dy = x - self.start_pos[0], y - self.start_pos[1]
+                px, py, w, h = self.positions[self.current_idx]
+                new_w = max(20, w + dx)
+                new_h = max(20, h + dy)
+                self.positions[self.current_idx] = (px, py, new_w, new_h)
+                self.start_pos = (x, y)
+                self.save_positions(self.positions, pos_file)
+
+        elif event == cv2.EVENT_LBUTTONUP:
+            self.drawing = False
+            self.current_idx = -1
+
+        elif event == cv2.EVENT_RBUTTONDOWN:
+            for i, (px, py, w, h) in enumerate(self.positions[:]):
+                if px <= x <= px + w and py <= y <= py + h:
+                    self.positions.pop(i)
+                    self.save_positions(self.positions, pos_file)
+                    break
+
+    def configure_spots(self, frame, pos_file, video_idx):
+        original_frame = frame.copy()
+        cv2.namedWindow("Configure Parking Spots", cv2.WINDOW_NORMAL)
+        cv2.setMouseCallback("Configure Parking Spots", self._mouse_handler, param=(pos_file, video_idx))
+
+        print("\nConfiguration Controls:")
+        print("- LEFT click: Add spot")
+        print("- LEFT drag: Resize spot")
+        print("- RIGHT click: Delete spot")
+        print("- Press 'r' to reset")
+        print("- ESC: Save and exit")
+
+        while True:
+            display_frame = original_frame.copy()
+            for i, (x, y, w, h) in enumerate(self.positions):
+                color = (0, 255, 255) if i == self.current_idx else (0, 255, 0)
+                cv2.rectangle(display_frame, (x, y), (x + w, y + h), color, 2)
+                cv2.putText(display_frame, str(i + 1), (x + 5, y + 20),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+
+            cv2.imshow("Configure Parking Spots", display_frame)
+            key = cv2.waitKey(1)
+
+            if key == 27:
+                self.save_positions(self.positions, pos_file)
+                print(f"Saved {len(self.positions)} spots")
+                break
+            elif key == ord('r'):
+                self.positions = []
+                print("Reset all spots")
+
+        cv2.destroyWindow("Configure Parking Spots")
+
+    def process_frame(self, frame, positions, video_idx):
+        if self.original_frame_sizes[video_idx]:
+            frame = cv2.resize(frame, self.original_frame_sizes[video_idx])
+
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        blur = cv2.GaussianBlur(gray, (3, 3), 1)
+        thresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                       cv2.THRESH_BINARY_INV, 25, 16)
+        processed = cv2.medianBlur(thresh, 5)
+        kernel = np.ones((3, 3), np.uint8)
+        processed = cv2.dilate(processed, kernel, iterations=1)
+
+        valid_positions = [
+            (x, y, w, h)
+            for p in positions
+            if isinstance(p, (tuple, list)) and len(p) == 4
+            for x, y, w, h in [p]
+        ]
+
+        free_count = 0
+        for x, y, w, h in valid_positions:
+            spot = processed[y:y + h, x:x + w]
+            nonzero = cv2.countNonZero(spot)
+
+            if nonzero > (w * h * self.OCCUPANCY_THRESHOLD):
+                color = (0, 0, 255)
+                thickness = 2
+            else:
+                color = (0, 255, 0)
+                thickness = 3
+                free_count += 1
+
+            cv2.rectangle(frame, (x, y), (x + w, y + h), color, thickness)
+            cv2.putText(frame, str(nonzero), (x + 5, y + h - 5),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
+        status = f"Free: {free_count}/{len(valid_positions)}"
+        cv2.putText(frame, status, (20, 30), cv2.FONT_HERSHEY_SIMPLEX,
+                    1, (0, 200, 0), 2, cv2.LINE_AA)
+        return frame
