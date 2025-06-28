@@ -31,7 +31,11 @@ class ParkingMonitor:
         try:
             if pos_file.exists():
                 with open(pos_file, 'rb') as f:
-                    return pickle.load(f)
+                    data = pickle.load(f)
+                    if isinstance(data, list) and all(isinstance(p, (list, tuple)) and len(p) == 4 for p in data):
+                        return data
+                    else:
+                        print(f"[ERROR] Invalid data format in {pos_file.name}: {data}")
         except Exception as e:
             print(f"Error loading positions: {e}")
         return []
@@ -142,7 +146,11 @@ class ParkingMonitor:
         processed = cv2.dilate(processed, kernel, iterations=1)
 
         free_count = 0
-        for x, y, w, h in positions:
+        for item in positions:
+            if not isinstance(item, (tuple, list)) or len(item) != 4:
+                print(f"[WARNING] Skipping invalid spot: {item}")
+                continue
+            x, y, w, h = item
             spot = processed[y:y + h, x:x + w]
             nonzero = cv2.countNonZero(spot)
 
