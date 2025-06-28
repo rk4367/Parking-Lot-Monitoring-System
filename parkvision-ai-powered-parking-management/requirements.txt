@@ -2,7 +2,6 @@ Flask
 opencv-python
 numpy
 Pillow
-threading-helpers
 wheel
 setuptools
 gunicorn
