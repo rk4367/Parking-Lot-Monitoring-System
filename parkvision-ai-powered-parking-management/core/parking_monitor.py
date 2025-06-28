@@ -4,27 +4,28 @@ import numpy as np
 from pathlib import Path
 
 class ParkingMonitor:
-    def __init__(self):
-        self.positions = []
-        self.drawing = False
-        self.current_idx = -1
-        self.start_pos = None
-        
-        # Configuration
-        self.SPOT_WIDTH, self.SPOT_HEIGHT = 90, 30
-        self.OCCUPANCY_THRESHOLD = 0.2
-        self.FRAME_SKIP = 1
-        
-        # File paths
-        self.video_paths = [
-            Path(r"assets\video-1.mp4"),
-            Path(r"assets\video-3.mp4")
-        ]
-        self.pos_files = [
-            Path(r"assets\coordinate-video-1.pkl"),
-            Path(r"assets\coordinate-video-3.pkl")
-        ]
-        self.original_frame_sizes = [None, None]  # To store original video dimensions
+   def __init__(self):
+    self.positions = []
+    self.drawing = False
+    self.current_idx = -1
+    self.start_pos = None
+
+    # Configuration
+    self.SPOT_WIDTH, self.SPOT_HEIGHT = 90, 30
+    self.OCCUPANCY_THRESHOLD = 0.2
+    self.FRAME_SKIP = 1
+
+    # Use OS-independent paths
+    ASSET_DIR = Path("assets")
+    self.video_paths = [
+        ASSET_DIR / "video-1.mp4",
+        ASSET_DIR / "video-3.mp4"
+    ]
+    self.pos_files = [
+        ASSET_DIR / "coordinate-video-1.pkl",
+        ASSET_DIR / "coordinate-video-3.pkl"
+    ]
+    self.original_frame_sizes = [None, None]  # To store original video dimensions
 
     def load_positions(self, pos_file):
         """Load parking positions from file"""
