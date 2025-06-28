@@ -145,12 +145,15 @@ class ParkingMonitor:
         kernel = np.ones((3, 3), np.uint8)
         processed = cv2.dilate(processed, kernel, iterations=1)
 
+        valid_positions = [
+            (x, y, w, h)
+            for p in positions
+            if isinstance(p, (tuple, list)) and len(p) == 4
+            for x, y, w, h in [p]
+        ]
+
         free_count = 0
-        for item in positions:
-            if not isinstance(item, (tuple, list)) or len(item) != 4:
-                print(f"[WARNING] Skipping invalid spot: {item}")
-                continue
-            x, y, w, h = item
+        for x, y, w, h in valid_positions:
             spot = processed[y:y + h, x:x + w]
             nonzero = cv2.countNonZero(spot)
 
@@ -166,7 +169,23 @@ class ParkingMonitor:
             cv2.putText(frame, str(nonzero), (x + 5, y + h - 5),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
-        status = f"Free: {free_count}/{len(positions)}"
+        status = f"Free: {free_count}/{len(valid_positions)}"
         cv2.putText(frame, status, (20, 30), cv2.FONT_HERSHEY_SIMPLEX,
                     1, (0, 200, 0), 2, cv2.LINE_AA)
         return frame
+
+    def generate_video_stream(self, video_idx):
+        cap = cv2.VideoCapture(str(self.video_paths[video_idx]))
+        positions = self.load_positions(self.pos_files[video_idx])
+        if not cap.isOpened():
+            raise RuntimeError(f"Cannot open video {video_idx}")
+
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                continue
+            frame = self.process_frame(frame, positions, video_idx)
+            _, jpeg = cv2.imencode('.jpg', frame)
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n')
